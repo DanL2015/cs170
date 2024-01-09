@@ -975,4 +975,235 @@ The ratio between the greedy solution and optimal solution is always less than $
 \pagebreak
 \section{Dynamic Programming}
 
+\subsection{Shortest Paths in DAGs, Revisited}
+We can use dynamic programming to study the shortest paths in directed acyclic graphs (dags).
+Dags can be linearized, meaning that their nodes can be lined up so that all edges go from left to right.
+To find the shortest path to any node, we simply have to compare the distances of the paths of the incoming edges.
+We can therefore use the following algorithm to compare the distances in a single pass:
+\begin{verbatim}
+  initialize all dist() values to infinity
+  dist(s) = 0
+  for each v in V\{s}, in linearized order:
+    dist(v) = min_{(u, v) in E} {dist(u) + l(u, v)}
+\end{verbatim}
+Notice the algorithm is solving a collection of subproblems, namely finding $\{\verb|dist|(u) : u \in V\}$.
+We can start with the obvious $\verb|dist|(s) = 0$.
+Then, we can proceed to progressively large "subproblems," by looking at the distances that are further and further along.\\
+This is where dynamic programming comes in.
+Dynamic programming solves a problem by first identifying a collection of subproblems and tackling them one by one starting from the smallest, then using the answers to figure out larger ones.
+The dag is \textit{implicit} in all dynamic programming problems.
+Its nodes are the subproblems we define, and the edges are dependencies.
+
+\subsection{Longest Increasing Subsequence}
+The longest increasing subsequence problem involves taking a sequence of numbers, $a_1,\ldots ,a_n$, and outputting a subsequence which is strictly increasing and the longest possible.
+We can represent all increasing subsequences as a dag, where each node represents a number, and an edge is drawn from a node to another if the destination is larger.
+This translates the problem to finding the longest path in the dag.
+\begin{verbatim}
+  for j = 1, 2,... n:
+    L(j) = 1 + max{L(i) : (i, j) in E}
+  return max_j L(j)
+\end{verbatim}
+$\text{L}(j)$ is the length of the longest path ending at $j$.
+Since the path to node $j$ must pass through one of its predecessors, $\text{L}(j)$ is $1$ plus the maximum $L(\cdot)$ value of the values before it.
+The final answer is the largest $\text{L}(j)$, since any ending position is valid.\\
+This is dynamic programming since we have defined appropriate subproblems, namely finding $\text{L}(j)$.
+The runtime of the algorithm requires constructing an adjacency list of the graph and checking the indegree of $j$.
+Constructing the list takes linear time, and checking the indegree takes time linear in $|E|$.
+This is at most $O(n^2)$, the maximum being if the array is sorted in increasing order.\\
+To get the actual path of the shortest path, we need to store $\text{prev}(j)$, which is a pointer to the previous node of the longest path.
+By following the pointers, we can reconstruct the shortest path.
+
+\paragraph{Recursion? No, thanks.}
+Recursion by itself is a bad idea because it will take exponential time.
+The same subproblems will get solved over and over again, creating a tree with exponentially many nodes.
+Recursion only works well in divide and conquer, where problems are divided into \textit{substantially} smaller subproblems, so the tree only has logarithmic depth.
+A typical dynamic programming problem, in contrast, has only slightly smaller subproblems, but form a tree where many of the nodes are repeated.
+
+\paragraph{Programming?}
+The programming in dynamic programming initially meant "planning," so dynamic programming means to optimally plan multistage processes.
+The dag can be thought of all possible ways for a process to evolve, with each node being a state and the outgoing edges representing actions to new states.
+
+\subsection{Edit Distance}
+If we have two different strings, we can align them by using gaps.
+Then we can determine the cost of the string, or how many columns where the letters differ.
+Edit distance can also be thought as the minimum number of edits (insertions, deletions, and substitutions) required to transform the first string into the second.\\
+To apply dynamic programming, we first need to determine the subproblems.
+We can look at the edit distance between some prefix of the first string and the second string.
+We can call this subproblem $E(i, j)$, where $x[1\ldots i]$ and $y[1 \ldots j]$ are valid substrings.\\
+For the rightmost column, we can either insert a gap at $y[j]$, $x[i]$, or keep both of them.
+Therefore, we can divide $E(i, j)$ into three smaller subproblems, $E(i-1, j)$, $E(i, j-1)$, or $E(i-1, j-1)$.
+We can then define $E(i, j)$ as $$E(i, j) = \verb|min|\{1 + E(i-1, j), 1 + E(i, j-1), \text{diff}(i, j) + E(i-1, j-1)\}$$
+where $\text{diff}(i, j)$ is $0$ if $x[i] = y[j]$ and $1$ otherwise.\\
+The answers to the subproblems of $E(i, j)$ is a two-dimensional table.
+We need to ensure that $E(i, j-1)$, $E(i-1, j)$, and $E(i-1, j-1)$ are handled before $E(i, j)$.
+Therefore, both filling the rows from left to right or columns from top to bottom work.\\
+We also have to consider the base cases of the dynamic programming, or the smallest subproblems.
+These cases are $E(0, j) = j$ and $E(i, 0) = i$.
+This is because we have to add the first $j$ or $i$ letters to match the prefix from an empty substring.
+\begin{verbatim}
+  for i = 0, 1, 2,..., m:
+    E(i, 0) = i
+  for j = 0, 1, 2,..., n:
+    E(0, j) = j
+  for i = 1, 2,..., m:
+    for j = 1, 2,..., n:
+      E(i, j) = min{E(i-1, j) + 1, E(i, j-1) + 1, E(i-1, j-1) + diff(i, j)}
+  return E(m, n)
+\end{verbatim}
+The underlying dag has the form $(i-1, j) \rightarrow (i, j)$, $(i, j-1) \rightarrow (i, j)$, $(i-1, j-1) \rightarrow (i, j)$.
+We can also add weights on the edges, so the edit distances are given by the shortest paths in the dag.
+All the weights are set to $1$, except where $\{(i-1, j-1) \rightarrow (i, j) : x[i] = y[i]\}$, which has a length of $0$.
+Each move downw is a deletion, each move right is an insertion, and each diagonal move is either a match or a substitution.
+
+\paragraph{Common Subproblems}
+There are a few common subproblems that arise repeatedly.
+\begin{enumerate}
+  \item The input is $x_1, x_2,\ldots x_n$, and a subproblem is $x_1, x_2,\ldots x_i$.
+    The number of subproblems is linear.
+  \item The input is $x_1,\ldots x_n$, and $y_1,\ldots y_n$, and a subproblem is $x_1,\ldots x_i$ and $y_1,\ldots y_j$.
+    The number of subproblems is $O(mn)$.
+  \item The input is $x_1,\ldots x_n$ and a subproblem is $x_i, x_{i+1},\ldots x_j$.
+    The number of subproblems is $O(n^2)$.
+  \item The input is a rooted tree, and a subproblem is a rooted subtree.
+\end{enumerate}
+
+\subsection{Knapsack}
+During a robbery, a burglar needs to decide what to put in his bag, which can hold a total weight of at most $W$ pounds.
+There are $n$ items, with weights $w_1,\ldots w_n$ and value $v_1,\ldots v_n$.
+He wants to find the most valuable combination of items into the bag.
+There are two variations of the problem, the first that allows repetition, and the second that only has one of each item.
+
+\subsubsection{Knapsack with Repetition}
+We define $K(w) = \text{maximum value achievable with a knapsack of capacity $w$}$.
+Then, we get the following relation: $$K(w) = \verb|max|_{i: w_i \leq w} \{K(w - w_i) + v_i\}$$.
+\begin{verbatim}
+  K(0) = 0
+  for w = 1 to W:
+    K(w) = max{K(w - w_i) + v_i : w_i <= w}
+  return K(W)
+\end{verbatim}
+The algorithm fills up a one-dimensional table of length $W + 1$.
+Each entry can take up to $O(n)$ to compute, so the overall runtime is $O(nW)$.
+The algorithm can be represented by a dag, and finding the longest path in it.
+
+\subsubsection{Knapsack without Repetition}
+Our earlier subproblem cannot be used because we don't know whether item $n$ has already been used when looking at $K(w - w_n)$.
+Therefore, we need to add a second parameter, $0 \leq j \leq n$: $$K(w, j) = \text{maximum value achievable using a knapsack of capacity $w$ and items $1,\ldots j$}$$
+Then, our answer is $K(W, n)$.
+We can also express $K(w, j)$ in terms of subproblems by using $K(w, j) = \verb|max|\{K(w - w_j, j-1) + v_j, K(w, j-1)\}$.
+The result is filling out a 2D table, with $W+1$ rows and $n+1$ columns, taking $O(nW)$ time.
+\begin{verbatim}
+  Initialize all K(0, j) = 0 and all K(w, 0) = 0
+  for j = 1 to n:
+    for w = 1 to W:
+      if w_j > w: K(w, j) = K(w, j-1)
+      else: K(w, j) = max{K(w, j - 1), K(w, w_j, j-1) + v_j}
+\end{verbatim}
+
+\paragraph{Memoization}
+Dynamic programming also suggests a recursive algorithm, since it builds upon subproblems.
+However, a naive recursive solution is very inefficient, since it solves the same subproblems over and over again.
+An algorithm can use a hash table to store the values of $K(\cdot)$ that have already been computed, and whenever calculating some $K(w)$, the algorithm first checks if the answer is already in the table.
+This trick if called memoization.\\
+The constant factor in the big-$O$ notation is larger because of recursion overhead.
+However, sometimes memoization pays off since dynamic programming solves every subproblem that could conceivably needed, while memoization only ends up solving the ones actually used.
+
+\subsection{Chain Matrix Multiplication}
+If we want to multiply matrices, we can change the grouping of multiplication, since matrix multiplication is associative.
+This means that $A \times (B \times C) = (A \times B) \times C$.\\
+Multiplying an $m \times n$ matrix by an $n \times p$ matrix takes $mnp$ multiplications.
+Therefore, rearranging the parenthesis in matrix multiplication will change the cost.
+We want to determine the optimal order of multiplying matrices with dimensions $m_{0} \times m_{1}, m_{1} \times m_{2},\ldots  m_{n-1} \times m_n$.\\
+Notice we can represent the order of multiplication as a binary tree, with the individual matrices in the trees, interior nodes being intermediate products, and the root being the final product.
+Since the number of possible trees is exponential in $n$, we cannot try every tree.\\
+In order for the tree to be optimal, its subtrees must also be optimal.
+For $1 \leq i \leq j \leq n$, let us define the cost $$C(i, j) = \text{minimum cost of multiplying $A_i \times A_{i+1} \times \cdots \times A_j$}$$
+The smallest subproblem is when $i = j$, where nothing is multiplied and $C(i, i) = 0$.
+For $j > 1$, we split the product by choosing $k$ where $i \leq k < j$, creating two subtrees $A_i \times \cdots \times A_k$ and $A_{k+1} \times \cdot \times A_j$.
+The cost of the subtree is then $C(i, k) + C(k+1, j) + m_{i-1} \cdot m_k \cdot m_j$.
+We just need to find the splitting point $k$ for which the equation is the smallest.
+\begin{verbatim}
+  for i = 1 to n: C(i, i) = 0
+  for s = 1 to n - 1:
+    for i = 1 to n - s:
+      j = i + s
+      C(i, j) = min(C(i, k) + C(k+1, j) + m_{i-1} * m_k * m_j : i <= k < j)
+  return C(1, n)
+\end{verbatim}
+The subproblems create a two-dimensional table, with each entry taking $O(n)$ time, making the overall runtime $O(n^3)$.
+
+\subsection{Shortest Paths}
+\subsubsection{Shortest Reliable Paths}
+Sometimes we want to find the shortest path within a certain number of edges, since more edges may cause more unreliability.
+Suppose we want to find the shortest path in a graph $G$ from $s$ to $t$ that uses at most $k$ edges.
+Let us define, for each vertex $v$ and integer $i \leq k$, $\verb|dist|(v, i)$ to be the length of the shortest path from $s$ to $v$ that uses $i$ edges.
+The starting values $\verb|dist|(v, 0)$ are $\infty$ for all vertices except $s$, which is $0$.
+Then the equation is $$\verb|dist|(v, i) = \verb|min|_{(u, v) \in E} \{\verb|dist|(u, i - 1) + l(u, v)\} $$
+
+\subsubsection{All-pairs Shortest Paths}
+If we want to find the shortest path between all pairs of vertices, we can run the previous algorithm on all vertices $|V|$ times, making a runtime of $O(|V|^2 |E|)$.
+However, there is a more efficient dynamic programming algorithm known as the \textit{Floyd-Warshall} algorithm, which takes $O(|V|^3)$.\\
+First, number the vertices in $V$ as $\{1, 2,\ldots n\}$, and let $\verb|dist|(i, j, k)$ denote the length of the shortest path from $i$ to $j$ which only nodes $\{1, 2,\ldots k\}$ can be used as intermediates.
+Initially, $\verb|dist|(i, j, 0)$ is the length of the direct path between $i$ and $j$ if it exists, and $\infty$ otherwise.
+To check with using $k$ as an intermediate node between $i$ and $j$, we can simply check if $\verb|dist|(i, k, k-1) + \verb|dist|(k, j, k-1) < \verb|dist|(i, j, k-1)$.
+This is because we have already calculated the optimal path from $i$ to $k$ and from $k$ to $j$ using lower numbered nodes, so we only have to check one more path.
+\begin{verbatim}
+  for i = 1 to n:
+    for j = 1 to n:
+      dist(i, j, 0) = inf
+  for all (i, j) in E:
+    dist(i, j, 0) = l(i, j)
+  for k = 1 to n:
+    for i = 1 to n:
+      for j = 1 to n:
+        dist(i, j, k) = min(dist(i, k, k-1) + dist(k, j, k-1), dist(i, j, k - 1))
+\end{verbatim}
+
+\subsection{The Traveling Salesman Problem}
+A traveling salesman wants to visit each target city once and return home, with the minimum possible length.
+We denote the cities as $1, \ldots n$, with the salesman's hometown being $1$, and let $D = (d_{i, j})$ be a matrix of intercity distances.
+The goal is to design a tour that starts and ends at $1$, includes all other cities, and has minimum total length.\\
+The brute force solution takes $O(n!)$ time.
+Dynamic programming can yield a faster solution, although not in polynomial time.\\
+The most obvious subproblem is a partial tour, where we have started at city $1$, have visited a few cities, and now are in city $j$.
+We need to know all the cities visited so far, and $j$, the current city.
+The appropriate subproblem, then, is as follows:
+\begin{center}
+  For a subset of cities $S \subseteq \{1, 2,\ldots n\}$ that includes $1$, and $j \in S$, let $C(S, j)$ be the length of the shortest path visiting each node in $S$ exactly once, starting at $1$ and ending at $j$.
+\end{center}
+When $|S| > 1$, we define $C(S, 1) = \infty$ since the path cannot both start and end at $1$.
+To express $C(S, j)$ in terms of a smaller subproblem, we need to consider what to pick as the second-to-last city.
+It must be some $i \in S$, so the overall path length is the distance from $1$ to $i$, namely $C(S - {j}, i)$, plus the length of the final edge, $d_{ij}$.
+We need to pick the best such $i$: $$C(S, j) = \verb|min|_{i \in S: i \not= j} C(S - {j}, i) + d_{i, j}$$
+\begin{verbatim}
+  C({1}, 1) = 0
+  for s = 2 to n:
+    for all subsets S in {1, 2,..., n} of size s and containing 1:
+      C(S, 1) = inf
+      for all j in S, j != 1:
+        C(S, j) = min(C(S - {j}, i) + d_{ij} : i in S, i != j)
+  return min_j C({i, ..., n}, j) + d_{j1}
+\end{verbatim}
+There are at most $2^n \cdot n$ subproblems, and each one takes linear time to solve.
+The runtime is then $O(n^2 2^n)$.
+
+\subsection{Independent Sets in Trees}
+A subset of nodes $S \subset V$ is an \textit{independent set} of graph $G = (V, E)$ if there are no edges between the nodes in the set.
+If the graph is a tree, we can find the largest independent set of nodes in a graph in linear time.
+Just like the matrix multiplication problem, we can use the subtrees to naturally define the subproblem.\\
+Start by rooting the tree at any node $r$.
+Each node defines a subtree which hangs from it.
+Let $I(u)$ be the size of the largest independent set of subtree hanging from $u$.
+Our final goal is $I(r)$.\\
+Our dynamic programming problem should start at the subproblems, or the roots, and go up.
+We can split the computation into two cases, either including $u$ or not.
+$$I(u) = \verb|max|\left\{1 + \sum_{\text{grandchildren $w$ of $u$}} I(w), \sum_{\text{children $w$ of $u$}} I(w)\right\}$$
+
+\paragraph{On time and memory}
+The amount of time it takes to run a dynamic programming algorithm is the total number of edges in a dag.
+We just visit the nodes in linearized order, examine its inedges, and typically perform a custom amount of work per edge.
+The amount of memory required is not based on any part of the dag, however.
+We technically only need to store the value of a particular subproblem until the larger subproblems depending on it have been solved.
+For example, in Floyd-Warshall we only need two $|V| \times |V|$ arrays to store the dist values, one for odd values of $k$ and one for even values.
+
 \end{document}

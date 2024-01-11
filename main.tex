@@ -108,9 +108,9 @@ Rewriting this idea recursively:
 \]
 Let $n$ be the size in bits of $x$, $y$, and $N$ (whichever is largest).
 The algorithm halts after at most $n$ recursive calls, multiplying $n$ bit numbers every call.
-Therefore the runtime of exponentiation is $O(n^3)$
+Therefore, the runtime of exponentiation is $O(n^3)$
 
-\subsubsection{Euclid's Algorithm for Greated Common Divisor}
+\subsubsection{Euclid's Algorithm for Greatest Common Divisor}
 Given two integers $a$ and $b$, we want to find the largest integer that divides both of them, also known as the \emph{Greatest Common Divisor}.
 \begin{thm}[Euclid's Rule]
   If $x$ and $y$ are positive integers with $x \geq y$, then $gcd(x, y) = gcd(x \mod y, y)$.
@@ -229,7 +229,7 @@ The encryption function $e$ is an invertible function whose inverse is the decry
   Pick two primes, $p$ and $q$, and let $N = pq$. 
   For any $e$ relatively prime to $(p-1)(q-1)$ and $d = e^{-1} \mod (p - 1)(q - 1)$, the following is true:
   \begin{itemize}
-    \item The mapping $x \mapsto x^e \mod N$ is a biject on $\{0, 1, \dots N-1 \}$
+    \item The mapping $x \mapsto x^e \mod N$ is a bijection on $\{0, 1, \dots N-1 \}$
     \item $\forall x \in \{0, \dots, N-1\}$, $(x^e)^d \equiv x \mod N$.
   \end{itemize}
 \end{thm}
@@ -1205,5 +1205,449 @@ We just visit the nodes in linearized order, examine its inedges, and typically 
 The amount of memory required is not based on any part of the dag, however.
 We technically only need to store the value of a particular subproblem until the larger subproblems depending on it have been solved.
 For example, in Floyd-Warshall we only need two $|V| \times |V|$ arrays to store the dist values, one for odd values of $k$ and one for even values.
+
+\pagebreak
+\section{Linear Programming and Reductions}
+Many problems are optimization tasks, which satisfies certain constraints and is the best possible solution, with respect to some well-defined criterion.
+Linear programming refers to optimization tasks where both the constraints and optimization criterion are \textit{linear functions}.
+
+\subsection{An Introduction to Linear Programming}
+A linear programming problem involves taking in a set of variables and assignining real numbers to them to satisfy a set of linear equations and/or linear inequalities and maximize or minimize a lienar objective function.
+
+\subsubsection{Example: Profit Maximization}
+Let's say a chocolate store has two products, either the normal Pyramide and the deluxe Pyramide Nuit.
+We want to figure out how much of each it should produce to maximize profits.
+It makes $x_1$ boxes of Pyramide per day at a profit of \$1 each, and $x_{2}$ boxes of Nuit at a profit of \$6 each.
+$x_1$ and $x_2$ are unknown values that we want to determine.
+We also place some constraints on the number of $x_1$ and $x_2$, with there being at most $200$ boxes of Pyramide and $300$ boxes of Nuit.
+The total amount of boxes produced per day is at most $400$.
+We wish to figure out the optimal levels of production.\\
+Starting off, we represent the situation as a \textit{linear program}, as follows:
+\begin{center}
+\begin{tabular}{c c}
+  Objective function & $\verb|max|(x_1 + 6x_2)$\\
+  Constraints & $x_1 \leq 200$\\
+              & $x_2 \leq 300$\\
+              & $x_{1} + x_{2} \leq 400$\\
+              & $x_1, x_2 \geq 0$
+\end{tabular}
+\end{center}
+A linear equation defines a line in 2D, and the linear equality designates a \textit{half-space}, or one side of the line.
+The set of all feasible solutions of the linear program is the intersection of all half-spaces.
+We want to find the point in the polygon where the objective function, or the profit, is maximized.\\
+It is a general rule that the optimum is achieved at a vertex of the feasible region.
+The only exceptions are the following:
+\begin{enumerate}
+  \item The linear function is \textit{infeasible}, or the constraints cannot all be satisfied.
+  \item The constraints are unbounded, making it possible to achieve arbitrarily high objective values.
+\end{enumerate}
+We can solve linear programs with the \textit{simplex method}, which starts at a vertex and repeatedly looks for an adjacent vertex of a better objective value.
+After reaching a vertex with no better neighbor, simplex declares it to be optimal.
+Because the polygon is always convex (based on how it is created with half-spaces), the local optimum will always be the global optimimum.\\
+If we decided to add another product to the chocolate store, we now have a three dimensional space.
+Each linear equation defines a 3D plane, with each inequality being a half-space on one side of the plane.
+The simplex algorithm will behave the same for this model.
+Adding even more makes the problem hard to visualize, but simplex continues to work.
+
+\subsubsection{Example: Production Planning}
+Let's say we have a company that makes handwoven carpets, for which the demand is seasonal.
+We have demand estimates for all months of the next calendar year, $d_1, d_2,\ldots d_{12}$.
+We also currently have 30 employees, each of whom make 20 carpets per month and get a monthly salary of \$2,000.
+Initially, we start with no surplus of carpets.\\
+We can handle demand fluctuations in three different ways:
+\begin{enumerate}
+  \item Overtime, which requires paying $80\%$ more than regular pay, and workers can put in at most $30\%$ overtime.
+  \item Hiring or firing, which cost \$320 and \$400 respectively
+  \item Storing surplus production, which costs \$8 per carpet per month.
+\end{enumerate}
+We can formulate and solve this problem as a linear program.\\
+We first start by defining the variables:
+\begin{center}
+  \begin{align*}
+    w_i &= \text{number of workers during $i$th month; $w_0 = 30$}\\
+    x_i &=  \text{number of carpets made during $i$th month}\\
+    o_i &= \text{number of carpets made by overtime in month $i$}\\
+    h_i, f_i &\ \text{number of workers hired and fired at beginning of month $i$}\\
+  s_i &= \text{number of carpets stored at end of month $i$, $s_0 = 0$}
+  \end{align*}
+\end{center}
+There are $74$ variables in total (due to the months).\\
+All the variables must be nonnegative: $$w_i, x_i, o_i, h_i, f_i, s_i \geq 0, i = 1\ldots 12$$
+The total number of carpets made consists of regular production plus overtime: $$x_i = 20 w_i + o_i$$
+The number of workers changes at the start of each month: $$w_i = w_{i-1} + h_i - f_i$$
+The number of carpets stored at the end of each month is: $$s_i = s_{i-1} + x_i - d_i$$
+Overtime is limited: $$o_i \leq 6 w_i$$
+Finally, the objective function is: $$\verb|min| (2000 \sum_i w_i + 320 \sum_i h_i + 400 \sum_i f_i + 8 \sum_i s_i + 180 \sum_i o_i)$$
+However, one final note is that the optimal solution may be fractional, which could be impossible (such as hiring $10.6$ workers in a month).
+We would have to check both rounded numbers, which would increase the overall cost.
+
+\subsubsection{Example: Optimum Bandwidth Allocation}
+Suppose we are managing a network whose lines have certain bandwidths, and we must establish three connections: between users $A$ and $B$, $B$ and $C$, and $A$ and $C$.
+Each connection needs at least two units of bandwidth.
+Connection $A-B$, $B-C$, and $A-C$ pay \$3, \$2, and \$4 per unit of bandwidth.
+Each connection can be either routed via a long path or a short path, or a combination of both.
+We want to route these connections to maximize the network's revenue.\\
+We can turn this into a linear program by assigning values for each connection and each path.
+For example, $x_{AB}$ is the short path bandwidth for the $A-B$ connection, and ${x'}_{AB}$ is the long path bandwidth for the same connection.
+We also need to make sure that no path's bandwidth is exceeded, and every connection has a bandwidth of at least two units.
+Then, we can run the simplex algorithm for a solution.\\
+One thing to watch for is that each possible path between users has one variable, which can easily grow exponentially.
+
+\paragraph{Reductions}
+Sometimes a computational task can be used to solve other tasks which might seem unrelated.
+For example, the longest increasing subsequence reduces to finding the longest path in a dag.
+Finding the longest path in a dag also reduces to finding the shortest path in a dag, by negating all the edges.
+A task $P$ reduces to task $Q$ if any subroutine for task $Q$ can also be used to solve $P$.
+In other words, any instance $x$ of $P$ can be translated to an instance $y$ of $Q$, such that $P(x)$ can be deduced from $Q(y)$.
+
+\subsubsection{Variants of Linear Programming}
+A general linear program has many degrees of freedom:
+\begin{enumerate}
+  \item It can either be a maximization or minimization problem
+  \item Its constraints can be equations and/or inequalities
+  \item The variables are often restricted to be nonnegative
+\end{enumerate}
+We can reduce these various LP options to each other via simple transformations.
+\begin{enumerate}
+  \item To turn a maximization problem into minimization, just multiply the coefficients of the objective function by -1.
+  \item For inequality or equality constraints:
+    \subitem To turn an inequality constraint ($\sum_{i=1}^n a_i x_i \leq b$) into an equation, introduce a new \textit{slack variable} called $s$ and use
+      \begin{align*}
+        \sum_{i=1}^n a_i x_i + s &= b\\
+        s & \geq 0
+      \end{align*}
+    \subitem To change an equality constraint to inequalities, simply rewrite $ax = b$ as two constraints $ax \leq b$ and $ax \geq b$.
+  \item To deal with a variable $x$ unrestricted in sign, do the following
+    \begin{itemize}
+      \item Introduce two nonnegative variables, $x^+, x^- \geq 0$
+      \item Replace $x$ by $x^+ - x^-$.
+    \end{itemize}
+    $x$ can take on any real value by adjusting the new variables.
+\end{enumerate}
+We can reduce all LP problems to the \textit{standard form}, with all nonnegative variables, constraints are all equations, and the objective function is a minimize.
+
+\paragraph{Matrix-vector Notation}
+A linear function like $x_1 + 6x_2$ can be rewritten as the dot product of two vectors,
+\begin{equation*}
+  c = \begin{bmatrix} 1 \\ 6 \end{bmatrix},
+  x = \begin{bmatrix} x_1 \\ x_2 \end{bmatrix} 
+\end{equation*}
+We can similarly rewrite the constraints into matrix-vector form.
+For example, the following constraints
+\begin{align*}
+  x_1 & & \leq 200 \\
+      & x_2 & \leq 300\\
+  x_1 + & x_2 & \leq 400
+\end{align*}
+becomes
+\begin{align*}
+  \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{bmatrix}
+  \begin{bmatrix} x_1 \\ x_2 \end{bmatrix} 
+                      & \leq
+  \begin{bmatrix} 200 \\ 300 \\ 400 \end{bmatrix} 
+\end{align*}
+Therefore a generic LP can be expressed as $\verb|max|(c^T x)$, $Ax \leq b$, $x \geq 0$.
+
+\subsection{Flows in Networks}
+
+\subsubsection{Shipping Oil}
+Suppose we want to ship as much oil as possible from a source $s$ to a sink $t$, $s, t \in V$.
+We are given a directed graph $G = (V, E)$ representing a network of pipelines, with each edge having a maximum \textit{capacity} $c_e > 0$ that can be handled.
+
+\subsubsection{Maximizing Flow}
+A particular shipping scheme is called a flow, and consists of a variable $f_e$ for each edge $e$ of the network.
+\begin{enumerate}
+  \item It doesn't violate edge capacities $0 \leq f_e \leq c_e$ for all $e \in E$
+  \item For all nodes $u$ except $s$ and $t$, the amount of flow entering $u$ equals the amount leaving $u$: $$\sum_{(w, u) \in E} f_{wu} = \sum_{(u, z) \in E} f_{uz}$$
+\end{enumerate}
+The size of a flow is the total quantity sent from $s$ to $t$, and is equal to the quantity leaving $s$: $$\verb|size|(f) = \sum_{(s, u) \in E} f_{su}$$
+Our goal is to assign values to ${f_e : e \in E}$ that satisfies a set of linear constraints and maximizes a linear objective function.
+Therefore, the maximum-flow problem reduces to linear programming.\\
+
+\subsubsection{A Closer Look at the Algorithm}
+The algorithm to solve direct max-flow algorithms involves starting with zero flow, choosing an appropriate path from $s$ to $t$, and maximizing the flow along the edges as much as possible.
+However, if we initially choose an unoptimal path, it seems to block all other paths.
+We can solve this by allowing paths to cancel existing flows going in the opposite direction.
+Therefore, in each iteration simplex looks for two different types of edges:
+\begin{enumerate}
+  \item $(u, v)$ is in the original network, and is not yet in full capacity.
+  \item The reverse edge $(v, u)$ is in the original network, and there is some flow along it.
+\end{enumerate}
+If the current flow is $f$, then in the first case the edge $(u, v)$ can handle up to $c_{uv} - f_{uv}$ additional units of flow.
+In the second case, the edges $(u, v)$ can handle up to $f_{vu}$ additional units (cancelling all or part of the flow on $(v, u)$).
+We can capture these opportunities with a \textit{residual network} $G^f = (V, E^f)$, whcih has the two types of edges, with residual capacities $c^f$:
+$$\begin{cases}
+  c_{uv} - f_{uv} & \text{if $(u, v) \in E$ and $f_{uv} < c_{uv}$}\\
+  f_{vu} & \text{if $(v, u) \in E$ and $f_{vu} > 0$}
+\end{cases}$$
+
+\subsubsection{A Certificate of Optimality}
+We can generate a short proof of the optimality of the flow using simplex.
+First, partition the nodes of the oil network into two groups, $L$ and $R$, with $s$ in $L$ and $t$ in $R$, known as a $(s, t)$-\textit{cut} partition.
+Any oil must pass from $L$ to $R$.
+Therefore, no flow can possibly exceed the total capacity of the edges from $L$ to $R$.
+This is an upper bound on $\textit{any}$ flow:
+\begin{center}
+  Pick any flow $f$ and any $(s, t)$-\textit{cut} $(L, R)$.
+  Then $\verb|size|(f) \leq \verb|capacity|(L, R)$.
+\end{center}
+
+\begin{theorem}[Max-flow min-cut Theorem]
+  The size of the maximum flow in a network equals the capacity of the smallest $(s, t)$-cut.
+\end{theorem}
+Our algorithm automatically will find this cut.\\
+Let $f$ be the final flow when the algorithm terminates.
+We group all the nodes we can still visit from $s$ into $L$, and group the rest into $R$.
+Then, $\verb|size|(f) = \verb|capacity|(L, R)$.
+
+\subsubsection{Efficiency}
+Each iteration of the maximum flow algorithm requires $O(|E|)$ time if DFS or BFS is used to find an $s-t$ path.
+We want to know how many iterations there are.\\
+Suppose all edges have an integer capacity $\leq C$.
+An inductive argument shows that on each iteration, the flow is always an integer and increases by an integer amount.
+Therefore, since the maximum flow is at most $C|E|$, the number of iterations is at least $C|E|$ as well.
+However, $C$ may be large, which is an issue if we do not pick the paths correctly.
+If we use a breadth-first search, which finds the path with the fewest edges, the number of iterations is at most $O(|V| \cdot |E|)$ no matter the capacity.\\
+This gives an overall runtime of $O(|V| \cdot |E|^2)$ for maximum flow.
+
+\subsection{Bipartite Matching}
+Let's say there is a bipartite graph with four nodes on the left and four on the right.
+There are also edges between the two sides.
+We wish to know if there is a way to create a \textit{perfect matching}, where each of the nodes are paired up.\\
+This problem can be reduced to a maximum-flow problem, which is then reduced to a linear-programming problem.
+Create a new source node, $s$, with outgoing edges to all one side, then a sink node, $t$, connected to all the other side.
+Finally, give each edge a capacity of $1$.
+Then there is a perfect matching if and only if the network has a flow the size of the number of pairs.\\
+One thing to consider is that the optimum \textit{integer valued} flow corresponds to the optimum matching.
+However, there is a useful property:
+\begin{property}
+  If all edge capacities are integers, then the optimal flow found by the algorithm is integral.
+  Note that this property is not applicable to all general linear programs.
+\end{property}
+
+\subsection{Duality}
+Every linear maximization problem has a dual minimization problem.\\
+With a system of constraints and a solution, we can create a \textit{certificate of optimality} by simplifying the equations to prove our solution is the best possible.
+We want to find if there is a way to know if this certificate exists, and to find this certificate.
+Suppose we have the following systems of equations and the objective function $x_1 + 6x_{2}$:
+\begin{center}
+\begin{tabular}{c c}
+  Multiplier & Inequality \\
+  $y_1$ & $x_1 \leq 200$\\
+  $y_2$ & $x_2 \leq 300$\\
+  $y_3$ & $x_1 + x_2 \leq 400$\\
+\end{tabular}
+\end{center}
+If we assume the $y_i$'s are negative, adding the equations together we get the following bound: $$(y_1 + y_{3})x_{1} + (y_{2} + y_{3})x_{2} \leq 200 y_{1} + 300 y_{2} + 400 y_{3}$$
+To simplify to our objective function, we need $y_{1} + y_{3} = 1$ and $y_{2} + y_{3} = 6$.
+We then get the following upper bound: $$x_{1} + 6x_{2} \leq 200 y_{1} + 300 y_{2} + 400 y_{3}, \begin{cases} y_{1},y_{2},y_{3} \geq 0 \\ y_{1} + y_{3} \geq 1 \\ y_{2} + y_{3} \geq 6 \end{cases}$$
+This then becomes a new LP:
+\begin{align*}
+  \text{min}(200 y_{1} + 300 y_{2} + 400 y_{3})\\
+  y_{1} + y_{3} \geq 1\\
+  y_{2} + y_{3} \geq 6\\
+  y_{1},y_{2},y_{3} \geq 0
+\end{align*}
+Any feasible value of the \textit{dual} LP is an upper bound on the original \textit{primal} LP.
+Therefore, if we find an equal pair of primal and dual values, they must both be optimal.
+\begin{theorem}[Duality Theorem]
+  If a linear program has a bounded optimum, then so does its dual, and the two optimum values coincide.
+\end{theorem}
+
+\subsection{Zero-sum Games}
+We can represent conflict situations in life by \textit{matrix games}.
+For example, rock-paper-scissors can be modeled as a 2D matrix, where the column represents moves from one player and row represents moves from another.
+\begin{center}
+$G = $\begin{tabular}{c | c c c}
+  & r & p & s \\
+  \hline
+  r & $0$ & $-1$ & $1$ \\
+  p & $1$ & $0$ & $-1$\\
+  s & $-1$ & $1$ & $0$
+\end{tabular}
+\end{center}
+We can model the strategy for each player by a vector $x = (x_1, x_2, x_3)$, playing $r$, $p$, and $s$ with probability $x_{1}$, $x_{2}$, and $x_{3}$ respectively.
+Let's call the Row strategy $x$ and the Column strategy $y$.
+On any given round, there is an $x_i y_j$ chance that Row and Column will play the $i$th and $j$th moves, respectively.
+Therefore, the average payoff is $$\sum_{i, j} G_{ij} \cdot \text{Prob[Row plays $i$, Column plays $j$]} = \sum_{i,j} G_{ij} x_i y_j$$
+Row wants to maximize this, and Column wants to minimize this.
+If Row plays a random strategy $x = (\frac{1}{3}, \frac{1}{3}, \frac{1}{3})$, then the payoff for Column playing anything is $0$.
+If either player plays completely randomly, the average payoff is $0$.\\
+Suppose we have a different way, considering two scenarios:
+\begin{itemize}
+  \item Row announces their strategy, then Column picks their strategy
+  \item Column announces their strategy, then Row picks their strategy
+\end{itemize}
+However, it turns out that if both play optimally, it doesn't hurt the player to announce their strategy in advance.
+This is equivalent to the linear programming duality.\\
+Let's say we have a nonsymmetric game, with a \textit{presidential election} scenario.
+There are two candidates for office, and each can focus on, either economy, society, morality, and tax cut.
+The entries are millions of votes lost by Column:
+\begin{center}
+  \begin{tabular}{c | c c}
+     & $m$ & $t$ \\
+     \hline
+    $e$ & $3$ & $-1$\\
+    $s$ & $-2$ & $1$\\
+  \end{tabular}
+\end{center}
+Let's say Row announces a strategy of $x = (\frac{1}{2}, \frac{1}{2})$.
+If Column plays $m$, the expected loss is $\frac{1}{2}$.
+If Column plays $t$, the expected loss is $0$.
+Therefore, Column should play the \textit{pure} strategy $y = (0, 1)$.\\
+More generally, when Row's strategy $x = (x_1, x_2)$ is fixed, there is always a pure strategy that is optimal for Column.
+Column should either choose move $m$, with payoff $3x_1 - 2x_2$, or $t$, with payoff $-x_1 + x_2$, whichever is smaller.\\
+This is because any mixed strategy $y$ is a weighted average of the two, so it cannot beat the better of the two.
+Therefore, if Row is forced to announce their strategy, they should pick $(x_1, x_2)$ that maximizes $\verb|min|\{3x_1 - 2x_2, -x_1 + x_2\}$.\\
+Now, we will see that this can be found by an LP.
+For a fixed $x_1$ and $x_2$, $z = \verb|min|\{3x_1-2x_2, -x_1 + x_2\}$ is equivalent to $\verb|max|(z), z \leq 3x_1 - 2x_2, z \leq -x_1 + x_2$.\\
+Row needs to choose $x_1$ and $x_2$ to maximize $z$:
+\begin{align*}
+  \text{max}(z)\\
+  -3x_1 + 2x_2 + z & \leq 0\\
+  x_1 - x_2 + z & \leq 0\\
+  x_1 + x_2 & = 1\\
+  x_1, x_2 & \geq 0
+\end{align*}
+Symmetrically, if Column announced their strategy first, they must pick $y_1$, $y_2$ that minimizes $\verb|max|\{3y_1 - y_2, -2y_1 + y_{2}\}$.
+In LP form, this is:
+\begin{align*}
+  \text{min}(w)\\
+  -3y_1 + y_2 + w & \geq 0\\
+  2y_1 - y_2 + w & \geq 0\\
+  y_1 + y_2 & = 1 \\
+  y_1, y_2 & \geq 0
+\end{align*}
+These two LPs are dual to each other, so they have the same optimum, called $V$.
+In other words, Row (the maximizer) can determine a strategy with an expected outcome of at least $V$ no matter what Column does.
+Column (the minimizer) can guarantee an expected outcome of at most $V$, no matter that Row does.
+Therefore, there is a uniquely defined optimal play, $V$, also known as the \textit{value} of the game.\\
+\begin{theorem}[Min-max Theorem]
+  $$\verb|max|_x \verb|min|_y \sum_{i, j} G_{ij}x_i y_j = \verb|min|_y \verb|max|_x \sum_{i, j} G_{ij}x_iy_j$$
+  This is surprising, since if Row announces their strategy first, it would seem like it would favor Column.
+  However, duality equalizes the two, like with maximum flows and minimum cuts.
+\end{theorem}
+
+\subsection{The Simplex Theorem}
+The Simplex algorithm takes a set of linear inequalities and a linear objective function and finds the optimal feasible point by the following strategy:
+\begin{verbatim}
+  Let v be any vertex of the feasible region
+  while there is a neighbor v' of v with better objective value:
+    set v = v'
+\end{verbatim}
+If we have $n$ variables, $x_1,\ldots,x_n$, any setting of the $x_i$'s can be represented by an $n$-tuple of real numbers and plotted in $n$-dimensional space.
+A linear equation involving the $x_i$'s defines a \textit{hyperplane} in the same space $\mathbb{R}^n$, and the corresponding linear inequality defines a \textit{half-space}.
+The intersection of the corresponding half-spaces forms a convex polyhedron.
+
+\subsubsection{Vertices and Neighbors in $n$-dimensional Space}
+Each vertex is a unique point at which some subset of hyperplanes intersects.
+\begin{definition}[LP Vertex]
+  Pick a subset of the inequalities.
+  If there is a unique point that satisfies them with equality, and this point is feasible, then it is a \textit{vertex}.
+\end{definition}
+If we have $n$ variables, we need at least $n$ linear equations to get a unique solution.
+Having more than $n$ equations is redundant; at least one of them can be rewritten as a linear combination of the others.\\
+A neighboring vertex contains $n-1$ shared inequalities in common.
+
+\subsubsection{The Algorithm}
+On each iteration, simplex has two tasks:
+\begin{enumerate}
+  \item Check whether the current vertex is optimal (if so, halt)
+  \item Determine where to move next
+\end{enumerate}
+If the vertex is at the origin, these tasks are easy.
+If it is elsewhere, we can move it to the origin.
+Suppose we have the generic LP, where $x = (x_1,\ldots x_n)$:
+\begin{align*}
+  \text{max}(c^T x)\\
+  Ax \leq b\\
+  x \geq 0
+\end{align*}
+
+Suppose the origin is feasible.
+Then it is a vertex, since it is the unique point where the $n$ inequalities $\{x_1 \geq 0,\ldots x_n \geq 0\}$.\\
+The origin is optimal if and only if all $c_i \leq 0$.
+If some $c_i > 0$, then the origin is not optimal since we can increase $x_i$.
+We continue to increase $x_i$ until some other inequality becomes tight, at which point we are at a new vertex.\\
+If we are not at the origin, and instead at some vertex $u$, we need to transform $u$ into the origin by shifting the coordinate system from the usual $(x_1,\ldots x_n)$ to the "local view" from $u$.
+We scale $y_1,\ldots, y_n$ to the $n$ hyperplanes that define and enclose $u$.
+If one of the enclosing inequalities is $a_i \cdot x \leq b_i$, then the distance from a point of $x$ to that particular "wall" is $$y_i = b_i - a_i \cdot x$$
+The $n$ equations of this type define the $y_i$'s as linear functions of the $x_i$'s, and this relationship can be inverted to express the $x_i$'s as a linear function of the $y_i$'s.\\
+Once we rewrite the entire LP in terms of the $y_i$'s, we express it in a different coordinate frame with the following properties:
+\begin{enumerate}
+  \item It includes the inequalities $y \geq 0$, which are the transformed versions of the inequalities defining $u$.\\
+  \item $u$ itself is the origin in $y$-space.\\
+  \item The cost function becomes $\verb|max|(c_u + \bar{c} ^Ty)$, where $c_u$ is the value of the objective function at $u$ and $\bar{c}$ is a transformed cost vector.
+\end{enumerate}
+
+\subsubsection{Loose Ends}
+\paragraph{The starting vertex}
+In a general LP, we cannot guarantee that we can start at the origin.
+However, the procedure to find a starting vertex can be reduced to an LP and solved by simples.
+We create a new LP as follows:
+\begin{itemize}
+  \item Create $m$ new artificial variables $z_1,\ldots ,z_m \geq 0$ where $m$ is the number of equations
+  \item Add $z_i$ to the left-hand side of the equation
+  \item Let the objective to be minimized be $z_1 + z_2 + \cdots + z_m$.
+\end{itemize}
+It is easy to come up with a starting vertex, namely the one with $z_i = b_i$ for all $i$ and all other variables zero.
+For the simplex solution, there are two cases.
+\begin{enumerate}
+  \item If the optimum value of $z_1 + \cdots + z_m$ is zero, then all $z_i$'s obtained by simplex are zero.
+    Therefore, the optimum vertex of the new LP is a feasible starting vertex of the original LP.
+  \item If the optimum objective is positive, then the LP is infeasible.
+\end{enumerate}
+
+\paragraph{Degeneracy}
+A vertex is degenerate if it means the intersection of more than $n = 3$ faces of the polyhedron.
+This is a problem if all the neighbors are identical to it, causing simplex to return a suboptimal degenerate degree.
+If we modify simplex to continue randomly despite having no improvement, it may loop forever.\\
+One solution is a \textit{perturbation}, which changes each $b_i$ by a tiny random amount to $b_i \pm \epsilon_i$.
+This doesn't change the essence of LP, but it differentiates between the solutions of the linear system.
+
+\paragraph{Unboundedness}
+In some cases an LP is unbounded, so that its objective function can be arbitrarily large.
+We can test this if there is a line across which the objective can become larger and larger, all the way to $\infty$.
+
+\subsubsection{The Running Time of Simplex}
+Let's say there is a generic linear program
+\begin{center}
+  $\verb|max|(c^T x)$ such that $Ax \leq 0$ and $x \geq 0$
+\end{center}
+with $n$ variables, and $A$ contains $m$ inequality constraints.\\
+Suppose the current vertex is $u$.
+By definition, it is an intersection of $n$ inequality constraints.
+Each of the neighbors shares $n-1$ of these inequalities, so $u$ can have at most $n \cdot m$ neighbors.
+A naive way checks each potential neighbor.
+By Gaussian elimination, the runtime for each vertex is $O(n^3)$, so the total runtime would be $O(mn^4)$ per iteration.\\
+However, we can reduce this to $mn$.
+Rewriting the LP to local view from vertex $u$ takes $O((m+n)n)$.
+This exploits how the local view changes only slightly between iterations, in just one of its defining inequalities.\\
+To select the best neighbor,  recall that the objective function is $\verb|max|(c_u + \bar{c} \cdot y)$, where $c_u$ is the value of the objective function at $u$.
+This suggests a direction to move: pick any $\bar{c_i} > 0$.\\
+Combining this, the running time per iteration of simplex is $O(mn)$.
+There can be at most $m+n \choose n$ iterations, but the upper bound is then exponential of $n$.
+
+\paragraph{Gaussian Elimination}
+If we have a system of linear equations, we can solve by multiplying equations by a constant and cancelling them out.
+Adding a multiple of one equation to another equation lets the overall system of equations remains equivalent.
+\begin{verbatim}
+  Input: A system E = {e_1,..., e_n} of equations in n unknown, X = {x_1,...x_n}:
+    e_1: a_11 x_1 + a_12 x_2 + ... + a_1n x_n = b_1, ...
+  Output: A solution of the system, if one exists
+  
+  if all coefficients a_i1 are zero:
+    halt with message ``either infeasible or not linearly independent``
+  if n = 1: return b_1 / a_11
+
+  choose the coefficient a_p1 of largest magnitude, and swap equations e_1, e_p
+  for i = 2 to n:
+    e_i = e_i - (a_i1 / a_11) * e_1
+  (x_2,..., x_n) = gauss(E - {e_1}, X - {x_1})
+  x_1 = (b_1 - sum_{j>1} a_1j x_j) / a_11
+  return (x_1,...,x_n)
+\end{verbatim}
+Gaussian elimination uses $O(n^2)$ arithmetic operations to reduce the problem size from $n$ to $n-1$, which uses $O(n^3)$ operations overall.
+
 
 \end{document}
